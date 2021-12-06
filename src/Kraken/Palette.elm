@@ -1,10 +1,11 @@
 module Kraken.Palette exposing
-    ( Palette, decode, hexToString )
+    ( Palette, Hex, decode, hexToString )
 
 
 import Json.Decode as D
 
 import Color exposing (Color)
+
 
 type Hex = Hex String
 

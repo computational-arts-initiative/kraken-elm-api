@@ -1,14 +1,14 @@
 {
     "type": "package",
-    "name": "jetbrains/kraken-elm-api",
+    "name": "cai/kraken-elm-api",
     "summary": "Kraken API for Elm",
     "license": "BSD-3-Clause",
-    "version": "1.0.0",
+    "version": "1.1.0",
     "exposed-modules": [
-        "JetBrains.Kraken",
-        "JetBrains.Kraken.Product",
-        "JetBrains.Kraken.Tileset",
-        "JetBrains.Kraken.Palette"
+        "Kraken",
+        "Kraken.Product",
+        "Kraken.Tileset",
+        "Kraken.Palette"
     ],
     "elm-version": "0.19.0 <= v < 0.20.0",
     "dependencies": {
