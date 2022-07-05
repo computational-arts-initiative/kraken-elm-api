@@ -1,5 +1,6 @@
 module Kraken exposing
     ( requestProducts
+    , requestProductSet
     , requestTilesetsNames
     , requestTilesetContent
     )
@@ -15,11 +16,23 @@ url : String
 url = "https://kraken.labs.jb.gg/"
 
 
+brandDataUrl : String
+brandDataUrl = "https://resources.jetbrains.com/cai/brand-data/"
+
+
 requestProducts : Cmd (Result Http.Error (List Product))
 requestProducts =
     Http.get
-        { url = url ++ "palettes/get_all"
+        { url = brandDataUrl ++ "products.json"
         , expect = Http.expectJson identity Product.decodeMany
+        }
+
+
+requestProductSet : Product.Set -> Cmd (Result Http.Error (List Product))
+requestProductSet set =
+    Http.get
+        { url = brandDataUrl ++ "products.json"
+        , expect = Http.expectJson identity <| Product.decodeSet set
         }
 
 

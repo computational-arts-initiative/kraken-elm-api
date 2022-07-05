@@ -1,12 +1,12 @@
 module Kraken.Product exposing
-    ( Product, AtPort
-    , empty
-    , paletteOf, codeOf, nameOf
-    , decodeMany
+    ( Product, AtPort, Set
+    , none
+    , paletteOf, codeOf, nameOf, idOf
+    , decodeMany, decodeSet
     , hasIcon, iconName
     , byName, jetbrainsFirst, standartSort
     , equal
-    , toPort
+    , toPort, toDict
     )
 
 
@@ -17,14 +17,29 @@ import Json.Decode as D
 import Kraken.Palette as Palette exposing (Palette)
 
 
-type Product = Product { code : String, name : String, palette : Palette }
+type Set
+    = Internal
+    | Public
 
 
-empty : Product
-empty = Product { code = "", name = "", palette = [] }
+type alias ProductRec =
+    { id : String
+    , code : String
+    , name : String
+    , palette : Maybe Palette
+    , logo : Maybe String
+    }
 
 
-paletteOf : Product -> Palette
+type Product =
+    Product ProductRec
+
+
+none : Product
+none = Product { id = "", code = "", name = "", palette = Nothing, logo = Nothing }
+
+
+paletteOf : Product -> Maybe Palette
 paletteOf (Product { palette }) = palette
 
 
@@ -36,31 +51,77 @@ nameOf : Product -> String
 nameOf (Product { name }) = name
 
 
-decode_ : D.Decoder { code : String, palette : Palette }
+idOf : Product -> String
+idOf (Product { id }) = id
+
+
+type alias ById = Dict.Dict String Product
+
+
+toDict : List Product -> ById
+toDict =
+    Dict.fromList << List.map (\product -> ( idOf product, product ))
+
+
+decode_ : D.Decoder ProductRec
 decode_
-    = D.map2
-        (\code palette -> { code = code, palette = palette })
+    = D.map5
+        ProductRec
+        (D.field "id" D.string)
         (D.field "code" D.string)
-        (D.field "palette" Palette.decode)
+        (D.field "name" D.string)
+        (D.map
+            (Maybe.andThen (\paletteList -> if List.isEmpty paletteList then Nothing else Just paletteList))
+            <| D.maybe
+            <| D.field "palette" Palette.decode)
+        (D.maybe <| D.field "logo" D.string)
 
 
 decodeMany : D.Decoder (List Product)
 decodeMany =
-    D.field "products"
-        <| D.map Dict.values
+    D.map Dict.values <| decodeDict
+
+
+decodeDict : D.Decoder ById
+decodeDict =
+    D.field "all"
         <| D.map (Dict.map
-                      (\productName { code, palette } ->
-                           Product { name = productName, code = code, palette = palette }
+                      (\_ rec ->
+                           Product rec
                       )
                  )
         <| D.dict decode_
 
 
+decodeSet : Set -> D.Decoder (List Product)
+decodeSet set =
+    D.map2
+        (\allProducts ->
+            List.filterMap
+                (\productFromSet ->
+                    Dict.get productFromSet allProducts
+                )
+        )
+        decodeDict
+        (D.field "set"
+            <| D.field
+                (case set of
+                    Internal -> "internal"
+                    Public -> "public"
+                )
+                (D.list D.string)
+            )
+
+
 hasIcon : Product -> Bool
-hasIcon product =
-    case iconName product of
+hasIcon (Product { logo }) =
+    case logo of
         Just _ -> True
         Nothing -> False
+
+
+iconName : Product -> Maybe String
+iconName (Product { logo }) = logo
 
 
 byName : Product -> Product -> Order
@@ -105,48 +166,16 @@ jetbrainsFirst prodA prodB =
         _ -> byName prodA prodB
 
 
-iconName : Product -> Maybe String
-iconName (Product { name }) =
-    case name of
-        "JetBrains" -> Just "logojb"
-        "Space" -> Just "Space"
-        "IntelliJ IDEA" -> Just "IntelliJ-IDEA"
-        "PhpStorm" -> Just "PhpStorm"
-        "PyCharm" -> Just "PyCharm"
-        "RubyMine" -> Just "RubyMine"
-        "WebStorm" -> Just "WebStorm"
-        "CLion" -> Just "CLion"
-        "DataGrip" -> Just "DataGrip"
-        "DataSpell" -> Just "DataSpell"
-        "AppCode" -> Just "AppCode"
-        "GoLand" -> Just "GoLand"
-        "ReSharper" -> Just "ReSharper"
-        "ReSharper C++" -> Just "ReSharperCPP"
-        "dotCover" -> Just "dotCover"
-        "dotMemory" -> Just "dotMemory"
-        "dotPeek" -> Just "dotPeek"
-        "dotTrace" -> Just "dotTrace"
-        "Rider" -> Just "Rider"
-        "TeamCity" -> Just "TeamCity"
-        "YouTrack" -> Just "YouTrack"
-        "Upsource" -> Just "Upsource"
-        "Hub" -> Just "Hub"
-        "Kotlin" -> Just "Kotlin"
-        "Mono" -> Just "Mono"
-        "MPS" -> Just "MPS"
-        "IntelliJ IDEA Edu" -> Just "IntelliJ-IDEA-Edu"
-        "PyCharm Edu" -> Just "PyCharm-Edu"
-        "Datalore" -> Just "Datalore"
-        _ -> Nothing
-
-
 equal : Product -> Product -> Bool
 equal productA productB =
-    nameOf productA == nameOf productB
+    idOf productA == idOf productB
 
 
 type alias AtPort =
     { name : String
+    , id : String
+    , code : String
+    , logo : String
     , palette :
         List
             { red : Float, green : Float, blue : Float, alpha : Float, hex : String, rgba : String }
@@ -156,8 +185,12 @@ type alias AtPort =
 toPort : Product -> AtPort
 toPort product =
     { name = nameOf product
+    , id = idOf product
+    , code = codeOf product
+    , logo = iconName product |> Maybe.withDefault ""
     , palette =
          paletteOf product
+            |> Maybe.withDefault []
             |> List.map
                 (\(color, maybeHex) ->
                     let
