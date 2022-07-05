@@ -103,7 +103,7 @@ decodeSet set =
                 )
         )
         decodeDict
-        (D.field "set"
+        (D.field "_sets"
             <| D.field
                 (case set of
                     Internal -> "internal"
