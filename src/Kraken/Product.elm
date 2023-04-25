@@ -4,7 +4,7 @@ module Kraken.Product exposing
     , paletteOf, codeOf, nameOf, idOf, tagline
     , decodeMany, decodeSet
     , hasIcon, iconName, assets
-    , ico16, icon, iconFull, square, logoVert, textAsset, textByJBAsset
+    , ico16, icon, iconFull, square, logoVert, textAsset, textByJBAsset, lettering, logoAsset
     , key, shortKey, twoLetter
     , byName, jetbrainsFirst, standartSort
     , equal
@@ -257,6 +257,14 @@ textAsset = assets >> .text
 
 textByJBAsset : Product -> Maybe AssetPair
 textByJBAsset = assets >> .textByJB
+
+
+lettering : Product -> Maybe AssetPair
+lettering = assets >> .lettering
+
+
+logoAsset : Product -> Maybe AssetPair
+logoAsset = assets >> .logo
 
 
 standartSort : (Product -> Int)
