@@ -20,8 +20,8 @@ import Kraken.Palette as Palette exposing (Palette)
 
 
 type Set
-    = Internal
-    | Public
+    = Complete
+    | Limited
 
 
 type alias AssetPair =
@@ -161,8 +161,8 @@ decodeSet set =
         (D.field "_sets"
             <| D.field
                 (case set of
-                    Internal -> "internal"
-                    Public -> "public"
+                    Limited -> "limited"
+                    Complete -> "complete"
                 )
                 (D.list D.string)
             )
