@@ -1,9 +1,11 @@
 module Kraken.Product exposing
-    ( Product, AtPort, Set
+    ( Product, AtPort, Set, Assets
     , none
-    , paletteOf, codeOf, nameOf, idOf
+    , paletteOf, codeOf, nameOf, idOf, tagline
     , decodeMany, decodeSet
-    , hasIcon, iconName
+    , hasIcon, iconName, assets
+    , ico16, icon, iconFull, square, logoVert, textAsset, textByJBAsset
+    , key, shortKey, twoLetter
     , byName, jetbrainsFirst, standartSort
     , equal
     , toPort, toDict
@@ -22,37 +24,81 @@ type Set
     | Public
 
 
+type alias AssetPair =
+    { vector : String
+    , raster : String
+    }
+
+
+type alias Assets =
+    { ico16 : Maybe AssetPair
+    , icon : Maybe AssetPair
+    , iconFull : Maybe AssetPair
+    , logoVert : Maybe AssetPair
+    , square : Maybe AssetPair
+    , text : Maybe AssetPair
+    , textByJB : Maybe AssetPair
+    }
+
+
 type alias ProductRec =
     { id : String
     , code : String
     , name : String
     , palette : Maybe Palette
     , logo : Maybe String
+    , key : Maybe String
+    , shortKey : Maybe String
+    , twoLetter : Maybe String
+    , tagline : Maybe String
     }
 
 
 type Product =
-    Product ProductRec
+    Product ProductRec Assets
 
 
 none : Product
-none = Product { id = "", code = "", name = "", palette = Nothing, logo = Nothing }
+none =
+    Product
+        { id = "", code = "", name = ""
+        , palette = Nothing
+        , logo = Nothing
+        , key = Nothing, shortKey = Nothing, twoLetter = Nothing
+        , tagline = Nothing
+        } noAssets
 
 
 paletteOf : Product -> Maybe Palette
-paletteOf (Product { palette }) = palette
+paletteOf (Product { palette } _) = palette
 
 
 codeOf : Product -> String
-codeOf (Product { code }) = code
+codeOf (Product { code } _) = code
 
 
 nameOf : Product -> String
-nameOf (Product { name }) = name
+nameOf (Product { name } _) = name
 
 
 idOf : Product -> String
-idOf (Product { id }) = id
+idOf (Product { id } _) = id
+
+
+key : Product -> String
+key (Product prec _) = prec.key |> Maybe.withDefault "-"
+
+
+shortKey : Product -> Maybe String
+shortKey (Product prec _) = prec.shortKey
+
+
+twoLetter : Product -> Maybe String
+twoLetter (Product prec _) = prec.twoLetter
+
+
+tagline : Product -> Maybe String
+tagline (Product prec _) = prec.tagline
 
 
 type alias ById = Dict.Dict String Product
@@ -63,18 +109,33 @@ toDict =
     Dict.fromList << List.map (\product -> ( idOf product, product ))
 
 
-decode_ : D.Decoder ProductRec
+decode_ : D.Decoder Product
 decode_
-    = D.map5
-        ProductRec
-        (D.field "id" D.string)
-        (D.field "code" D.string)
-        (D.field "name" D.string)
-        (D.map
-            (Maybe.andThen (\paletteList -> if List.isEmpty paletteList then Nothing else Just paletteList))
-            <| D.maybe
-            <| D.field "palette" Palette.decode)
-        (D.maybe <| D.field "logo" D.string)
+    =
+        D.map2
+            Product
+            (
+                D.map2
+                    identity
+                    (D.map8
+                        ProductRec
+                        (D.field "id" D.string)
+                        (D.field "code" D.string)
+                        (D.field "name" D.string)
+                        (D.map
+                            (Maybe.andThen (\paletteList -> if List.isEmpty paletteList then Nothing else Just paletteList))
+                            <| D.maybe
+                            <| D.field "palette" Palette.decode)
+                        (D.maybe <| D.field "logo" D.string)
+                        (D.maybe <| D.field "key" D.string)
+                        (D.maybe <| D.field "shortKey" D.string)
+                        (D.maybe <| D.field "twoLetter" D.string)
+                    )
+                    (D.maybe <| D.field "tagline" D.string)
+            )
+            (D.map (Maybe.withDefault noAssets)
+                <| D.maybe <| D.field "assets" <| decodeAssets
+            )
 
 
 decodeMany : D.Decoder (List Product)
@@ -85,11 +146,6 @@ decodeMany =
 decodeDict : D.Decoder ById
 decodeDict =
     D.field "all"
-        <| D.map (Dict.map
-                      (\_ rec ->
-                           Product rec
-                      )
-                 )
         <| D.dict decode_
 
 
@@ -113,19 +169,72 @@ decodeSet set =
             )
 
 
+decodeAssetPair : D.Decoder AssetPair
+decodeAssetPair =
+    D.map2
+        AssetPair
+        (D.field "vector" D.string)
+        (D.field "raster" D.string)
+
+
+decodeAssets : D.Decoder Assets
+decodeAssets =
+    D.map7
+        Assets
+        (D.maybe <| D.field "ico16"    decodeAssetPair)
+        (D.maybe <| D.field "icon"     decodeAssetPair)
+        (D.maybe <| D.field "iconFull" decodeAssetPair)
+        (D.maybe <| D.field "logoVert" decodeAssetPair)
+        (D.maybe <| D.field "square"   decodeAssetPair)
+        (D.maybe <| D.field "text"     decodeAssetPair)
+        (D.maybe <| D.field "textByJB" decodeAssetPair)
+
+
 hasIcon : Product -> Bool
-hasIcon (Product { logo }) =
+hasIcon (Product { logo } _) =
     case logo of
         Just _ -> True
         Nothing -> False
 
 
 iconName : Product -> Maybe String
-iconName (Product { logo }) = logo
+iconName (Product { logo } _) = logo
 
 
 byName : Product -> Product -> Order
 byName prodA prodB = compare (nameOf prodA) (nameOf prodB)
+
+
+assets : Product -> Assets
+assets (Product _ passets) = passets
+
+
+ico16 : Product -> Maybe AssetPair
+ico16 = assets >> .ico16
+
+
+icon : Product -> Maybe AssetPair
+icon = assets >> .icon
+
+
+iconFull : Product -> Maybe AssetPair
+iconFull = assets >> .iconFull
+
+
+logoVert : Product -> Maybe AssetPair
+logoVert = assets >> .logoVert
+
+
+square : Product -> Maybe AssetPair
+square = assets >> .square
+
+
+textAsset : Product -> Maybe AssetPair
+textAsset = assets >> .text
+
+
+textByJBAsset : Product -> Maybe AssetPair
+textByJBAsset = assets >> .textByJB
 
 
 standartSort : (Product -> Int)
@@ -206,4 +315,16 @@ toPort product =
                         , rgba = Color.toCssString color
                         }
                )
+    }
+
+
+noAssets : Assets
+noAssets =
+    { ico16 = Nothing
+    , icon = Nothing
+    , iconFull = Nothing
+    , logoVert = Nothing
+    , square = Nothing
+    , text = Nothing
+    , textByJB = Nothing
     }
