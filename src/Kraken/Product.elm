@@ -34,10 +34,12 @@ type alias Assets =
     { ico16 : Maybe AssetPair
     , icon : Maybe AssetPair
     , iconFull : Maybe AssetPair
+    , logo : Maybe AssetPair
     , logoVert : Maybe AssetPair
     , square : Maybe AssetPair
     , text : Maybe AssetPair
     , textByJB : Maybe AssetPair
+    , lettering : Maybe AssetPair
     }
 
 
@@ -115,22 +117,19 @@ decode_
         D.map2
             Product
             (
-                D.map2
-                    identity
-                    (D.map8
-                        ProductRec
-                        (D.field "id" D.string)
-                        (D.field "code" D.string)
-                        (D.field "name" D.string)
-                        (D.map
-                            (Maybe.andThen (\paletteList -> if List.isEmpty paletteList then Nothing else Just paletteList))
-                            <| D.maybe
-                            <| D.field "palette" Palette.decode)
-                        (D.maybe <| D.field "logo" D.string)
-                        (D.maybe <| D.field "key" D.string)
-                        (D.maybe <| D.field "shortKey" D.string)
-                        (D.maybe <| D.field "twoLetter" D.string)
-                    )
+                decMap9
+                    ProductRec
+                    (D.field "id" D.string)
+                    (D.field "code" D.string)
+                    (D.field "name" D.string)
+                    (D.map
+                        (Maybe.andThen (\paletteList -> if List.isEmpty paletteList then Nothing else Just paletteList))
+                        <| D.maybe
+                        <| D.field "palette" Palette.decode)
+                    (D.maybe <| D.field "logo" D.string)
+                    (D.maybe <| D.field "key" D.string)
+                    (D.maybe <| D.field "shortKey" D.string)
+                    (D.maybe <| D.field "twoLetter" D.string)
                     (D.maybe <| D.field "tagline" D.string)
             )
             (D.map (Maybe.withDefault noAssets)
@@ -177,17 +176,40 @@ decodeAssetPair =
         (D.field "raster" D.string)
 
 
+decMap9 :
+    (a -> b -> c -> d -> e -> f -> g -> h -> i -> value) ->
+    D.Decoder a -> D.Decoder b -> D.Decoder c -> D.Decoder d -> D.Decoder e -> D.Decoder f -> D.Decoder g -> D.Decoder h -> D.Decoder i -> D.Decoder value
+decMap9 f da db dc dd de df dg dh di =
+    D.map2
+        identity
+        (D.map8 f da db dc dd de df dg dh)
+        di
+
+
+decMap10 :
+    (a -> b -> c -> d -> e -> f -> g -> h -> i -> j -> value) ->
+    D.Decoder a -> D.Decoder b -> D.Decoder c -> D.Decoder d -> D.Decoder e -> D.Decoder f -> D.Decoder g -> D.Decoder h -> D.Decoder i -> D.Decoder j -> D.Decoder value
+decMap10 f da db dc dd de df dg dh di dj =
+    D.map3
+        identity
+        (D.map8 f da db dc dd de df dg dh)
+        di
+        dj
+
+
 decodeAssets : D.Decoder Assets
 decodeAssets =
-    D.map7
+    decMap9
         Assets
-        (D.maybe <| D.field "ico16"    decodeAssetPair)
-        (D.maybe <| D.field "icon"     decodeAssetPair)
-        (D.maybe <| D.field "iconFull" decodeAssetPair)
-        (D.maybe <| D.field "logoVert" decodeAssetPair)
-        (D.maybe <| D.field "square"   decodeAssetPair)
-        (D.maybe <| D.field "text"     decodeAssetPair)
-        (D.maybe <| D.field "textByJB" decodeAssetPair)
+        (D.maybe <| D.field "ico16"     decodeAssetPair)
+        (D.maybe <| D.field "icon"      decodeAssetPair)
+        (D.maybe <| D.field "iconFull"  decodeAssetPair)
+        (D.maybe <| D.field "logo"      decodeAssetPair)
+        (D.maybe <| D.field "logoVert"  decodeAssetPair)
+        (D.maybe <| D.field "square"    decodeAssetPair)
+        (D.maybe <| D.field "text"      decodeAssetPair)
+        (D.maybe <| D.field "textByJB"  decodeAssetPair)
+        (D.maybe <| D.field "lettering" decodeAssetPair)
 
 
 hasIcon : Product -> Bool
@@ -323,8 +345,10 @@ noAssets =
     { ico16 = Nothing
     , icon = Nothing
     , iconFull = Nothing
+    , logo = Nothing
     , logoVert = Nothing
     , square = Nothing
     , text = Nothing
     , textByJB = Nothing
+    , lettering = Nothing
     }
